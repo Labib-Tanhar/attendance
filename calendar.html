@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Class Attendance Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        body {
+            font-family: 'Readex Pro', sans-serif;
+            color: #333;
+        }
+        .present {
+            background-color: #c6efce;
+        }
+    
+        .absent {
+            background-color: #ffc7ce;
+        }
+    
+        .late {
+            background-color: #ffeb9c;
+        }
+    
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            border-radius: 10px;
+        }
+    
+        th,
+        td {
+            border: 1px solid #E8DEF8;
+            text-align: center;
+            padding: 8px;
+            font-size: 12px;
+        }
+    
+        th {
+            background-color: #F3EDF7;
+            
+        }
+    
+        #controls,
+        #dataLoadContainer {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+    
+        #dataLoadContainer {
+            margin-right: 10px;
+        }
+    
+        .material-symbols-rounded {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            width: 35px;
+            height: 35px;
+            margin-left: 10px;
+            background-color: #E8DEF8;
+        }
+    
+        label,
+        input {
+            margin-right: 10px;
+        }
+    
+        label:last-child,
+        input:last-child {
+            margin-right: 0;
+        }
+    </style>
+    
+</head>
+
+<body>
+    <h1>Class Attendance</h1>
+
+    <div id="controls">
+        <span id="prevBtn" class="material-symbols-rounded">keyboard_arrow_left</span>
+        <span id="nextBtn" class="material-symbols-rounded">keyboard_arrow_right</span>
+    </div>
+    
+    <div id="dataLoadContainer">
+        <label for="classInput">Class</label>
+        <input type="text" id="classInput">
+        <label for="sectionInput">Section</label>
+        <input type="text" id="sectionInput">
+        <span id="loadDataBtn" class="material-symbols-rounded">cloud_download</span>
+    </div>
+
+    <p id="monthYear"></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>1</th>
+                <th>2</th>
+                <th>3</th>
+                <th>4</th>
+                <th>5</th>
+                <th>6</th>
+                <th>7</th>
+                <th>8</th>
+                <th>9</th>
+                <th>10</th>
+                <th>11</th>
+                <th>12</th>
+                <th>13</th>
+                <th>14</th>
+                <th>15</th>
+                <th>16</th>
+                <th>17</th>
+                <th>18</th>
+                <th>19</th>
+                <th>20</th>
+                <th>21</th>
+                <th>22</th>
+                <th>23</th>
+                <th>24</th>
+                <th>25</th>
+                <th>26</th>
+                <th>27</th>
+                <th>28</th>
+                <th>29</th>
+                <th>30</th>
+                <th>31</th>
+            </tr>
+        </thead>
+        <tbody id="calendarBody">
+        </tbody>
+    </table>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyBaaIPOyxTYNZCi4FnRH3EO7o99kOr3wd8",
+            authDomain: "bhuiyanacademiccare.firebaseapp.com",
+            projectId: "bhuiyanacademiccare",
+            storageBucket: "bhuiyanacademiccare.appspot.com",
+            messagingSenderId: "966548238156",
+            appId: "1:966548238156:web:7b6d298511ec59b67169e9",
+            measurementId: "G-0XKS1KDYKP"
+        };
+        firebase.initializeApp(firebaseConfig);
+    
+        var db = firebase.firestore();
+        var classInput = document.getElementById("classInput");
+        var sectionInput = document.getElementById("sectionInput");
+        var loadDataBtn = document.getElementById("loadDataBtn");
+        var prevBtn = document.getElementById("prevBtn");
+        var nextBtn = document.getElementById("nextBtn");
+        var monthYearLabel = document.getElementById('monthYear');
+        var currentYear = new Date().getFullYear();
+        var currentMonth = new Date().getMonth();
+        var studentsData = [];
+    
+        loadDataBtn.addEventListener("click", function () {
+            var targetClass = classInput.value;
+            var targetSection = sectionInput.value;
+    
+            if (!targetClass || !targetSection) {
+                console.error("Class and Section are required");
+                return;
+            }
+    
+            loadClassData(targetClass, targetSection);
+        });
+    
+        class Calendar {
+            constructor(year, month) {
+                this.year = year;
+                this.month = month;
+                this.daysInMonth = new Date(year, month + 1, 0).getDate();
+                this.firstDay = new Date(year, month, 1).getDay();
+            }
+    
+            generateCalendarBody() {
+                document.getElementById("calendarBody").innerHTML = "";
+    
+                studentsData.forEach((student) => {
+                    const row = document.createElement("tr");
+    
+                    const nameCell = document.createElement("td");
+                    nameCell.textContent = student.name;
+                    row.appendChild(nameCell);
+    
+                    for (let date = 1; date <= this.daysInMonth; date++) {
+                        const cell = document.createElement("td");
+    
+                        if (student.attendance[date] === 'P') {
+                            cell.classList.add("present");
+                            cell.textContent = 'P';
+                        } else if (student.attendance[date] === 'A') {
+                            cell.classList.add("absent");
+                            cell.textContent = 'A';
+                        } else if (student.attendance[date] === 'L') {
+                            cell.classList.add("late");
+                            cell.textContent = 'L';
+                        }
+    
+                        row.appendChild(cell);
+                    }
+    
+                    document.getElementById("calendarBody").appendChild(row);
+                });
+            }
+        }
+    
+        function generateCalendar(year, month) {
+            const calendar = new Calendar(year, month);
+            const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long' });
+            monthYearLabel.textContent = `${monthName} ${year}`;
+            calendar.generateCalendarBody();
+        }
+    
+        function loadClassData(targetClass, targetSection) {
+            studentsData = [];
+            var promises = [];
+    
+            db.collection("users").where("class", "==", targetClass).where("section", "==", targetSection).get().then((snapshot) => {
+                snapshot.forEach((doc) => {
+                    var studentData = {
+                        name: doc.data().name,
+                        attendance: {}
+                    };
+                    studentsData.push(studentData);
+    
+                    promises.push(
+                        db.collection("users").doc(doc.id).collection("presences").where("date", ">=", new Date(currentYear, currentMonth, 1))
+                            .where("date", "<=", new Date(currentYear, currentMonth + 1, 0)).get().then((presenceSnapshot) => {
+                                presenceSnapshot.forEach((presenceDoc) => {
+                                    var date = presenceDoc.data().date.toDate().getDate();
+                                    studentData.attendance[date] = 'P';
+                                });
+                            })
+                    );
+    
+                    promises.push(
+                        db.collection("users").doc(doc.id).collection("absences").where("date", ">=", new Date(currentYear, currentMonth, 1))
+                            .where("date", "<=", new Date(currentYear, currentMonth + 1, 0)).get().then((absenceSnapshot) => {
+                                absenceSnapshot.forEach((absenceDoc) => {
+                                    var date = absenceDoc.data().date.toDate().getDate();
+                                    studentData.attendance[date] = 'A';
+                                });
+                            })
+                    );
+    
+                    promises.push(
+                        db.collection("users").doc(doc.id).collection("lates").where("date", ">=", new Date(currentYear, currentMonth, 1))
+                            .where("date", "<=", new Date(currentYear, currentMonth + 1, 0)).get().then((lateSnapshot) => {
+                                lateSnapshot.forEach((lateDoc) => {
+                                    var date = lateDoc.data().date.toDate().getDate();
+                                    studentData.attendance[date] = 'L';
+                                });
+                            })
+                    );
+                });
+    
+                return Promise.all(promises);
+            }).then(() => {
+                generateCalendar(currentYear, currentMonth);
+            }).catch((error) => {
+                console.error("Error loading class data:", error);
+            });
+        }
+    
+        prevBtn.addEventListener("click", function () {
+            currentMonth--;
+    
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+    
+            loadClassData(classInput.value, sectionInput.value);
+        });
+    
+        nextBtn.addEventListener("click", function () {
+            currentMonth++;
+    
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+    
+            loadClassData(classInput.value, sectionInput.value);
+        });
+    </script>
+    
+</body>
+
+</html>
